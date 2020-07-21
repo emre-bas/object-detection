@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Object Detection | TensorFlow.js coco-ssd</title>
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"> </script>
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"> </script>
+	<style>
+		#container{ text-align: center; }
+		#canvas{ width: 90%; max-width: 512px; height: auto; border: 3px solid #333333; border-radius: 5px; }
+	</style>
+</head>
+<body>
+	<div id="container">
+		<h1>Object Detection | TensorFlow.js coco-ssd</h1>
+		<hr>
+		<button id="btn_load" onclick="load()" >Load</button>
+		<button id="btn_start" onclick="start()" style="display: none;">Start</button>
+		<kbd id="info"></kbd>
+		<hr>
+		<canvas id="canvas"></canvas>
+		<hr>
+		<p>
+			<b>Details:</b>
+			<a target="_blank" href="https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd">
+				https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd</a>
+		</p>
+	</div>
+</body>
+</html>
+
+<script>
+	var video = document.createElement("video");
+	var canvas = document.querySelector("#canvas");
+	var info = document.querySelector("#info");
+	var btn_load = document.querySelector("#btn_load");
+	var btn_start = document.querySelector("#btn_start");
+	var ctx = canvas.getContext("2d");
+	var model = undefined;
+
+	var drawBox = function(x,y,width,height,text){
+		ctx.beginPath();
+		ctx.rect(x, y, width, height);
+		ctx.lineWidth = "2";
+		ctx.strokeStyle = "#00ff00";
+		ctx.stroke();
+		ctx.font = "16px Arial";
+		ctx.fillStyle = "#00ff00";
+		ctx.fillText(text,x+10,y+18);
+	}
+	var startCamera = async function() {
+    	let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    	video.srcObject = stream;
+    	await video.play();
+		canvas.width = video.videoWidth;
+		canvas.height = video.videoHeight;
+	}
+	var frame = async function(){
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+		var predictions = await model.detect(canvas);
+		for(var p of predictions){
+			drawBox(p.bbox[0], p.bbox[1], p.bbox[2], p.bbox[3], `${p.class} (${Math.round(p.score*100)}%)` )
+		}
+		setTimeout( frame, 1);
+	}
+	var load = async function(){
+		btn_load.style.display="none";
+		info.innerHTML = "Loading...";
+		model = await cocoSsd.load();
+		info.innerHTML = "";
+		btn_start.style.display="initial";
+	}
+	var start = async function(){
+		btn_start.style.display="none";
+		info.innerHTML = "Ready!";
+		await startCamera();
+		await frame();
+	}
+</script>
